@@ -197,8 +197,8 @@ jobs:
           merge-multiple: true
 
       - name: Setup minisign key
-        if: secrets.MINISIGN_KEY
-        run: echo "${{ secrets.MINISIGN_KEY }}" > minisign.key
+        if: secrets.NOTARY_MINISIGN_KEY
+        run: echo "${{ secrets.NOTARY_MINISIGN_KEY }}" > minisign.key
 
       - name: Use version from check
         id: version
@@ -238,9 +238,9 @@ jobs:
         run: mise run release
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
-          MINISIGN_KEY: ${{ secrets.MINISIGN_KEY }}
-          MINISIGN_PUB: ${{ secrets.MINISIGN_PUB }}
+          GPG_KEY_ID: ${{ secrets.NOTARY_GPG_KEY_ID }}
+          MINISIGN_KEY: ${{ secrets.NOTARY_MINISIGN_KEY }}
+          MINISIGN_PUB: ${{ secrets.NOTARY_MINISIGN_PUB }}
 
       - name: Create and push tag
         run: |

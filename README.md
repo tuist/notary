@@ -1,12 +1,12 @@
 # 📝 Notary
 
-A tool that brings CI/CD pipelines from various platforms to your local development environment. Notary uses existing pipelines from Codemagic, Bitrise, GitHub Actions, CircleCI, and other CI/CD platforms as the source of truth, maps them to a unified Pipeline Intermediate Format (PIF), and executes them locally in containers.
+A tool that enables developers to define and run CI/CD pipelines locally in containers, then cryptographically sign successful runs. Pipelines are simple bash scripts with annotations for containerization, caching, and signing requirements, stored in a `notary/` directory.
 
 ## 🎯 Philosophy
 
-We believe developers' environments are environments to trust, and powerful enough to take the role that CI company environments would take. By leveraging existing pipeline definitions from popular CI/CD platforms and converting them to a common intermediate format, Notary enables you to run workflows locally in containers, then sign off successful runs directly from your development machine.
+We believe developers' environments are environments to trust, and powerful enough to take the role that CI company environments would take. Notary lets you define pipelines as annotated bash scripts that run in containers locally, providing full control over your CI/CD process while maintaining cryptographic proof of successful executions.
 
-It's a great solution if you are a small or medium scale company and want to save the costs of CI infrastructure while maintaining compatibility with industry-standard CI/CD platforms.
+It's a great solution if you are a small or medium scale company and want to save the costs of CI infrastructure while maintaining security and reproducibility.
 
 ## 📦 Installation
 

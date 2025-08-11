@@ -22,20 +22,20 @@ Signing is optional but recommended. If you want to sign your releases, configur
   gpg --armor --export-secret-keys YOUR_KEY_ID > private.key
   # Copy the contents to GitHub secret
   ```
-- **`GPG_KEY_ID`**: The GPG key ID (e.g., `8B81C9D17413A06D`)
+- **`NOTARY_GPG_KEY_ID`**: The GPG key ID (e.g., `8B81C9D17413A06D`)
   ```bash
   # Find your key ID
   gpg --list-secret-keys --keyid-format=long
   ```
 
 ### Minisign (Optional - for .minisig files)
-- **`MINISIGN_KEY`**: Your minisign secret key
+- **`NOTARY_MINISIGN_KEY`**: Your minisign secret key
   ```bash
   # Generate a minisign key pair if you don't have one
   minisign -G -p minisign.pub -s minisign.key
   # Copy the contents of minisign.key to GitHub secret
   ```
-- **`MINISIGN_PUB`**: Your minisign public key
+- **`NOTARY_MINISIGN_PUB`**: Your minisign public key
   ```bash
   # Copy the contents of minisign.pub to GitHub secret
   ```
