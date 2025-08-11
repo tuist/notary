@@ -1,4 +1,3 @@
-// The Swift Programming Language
-// https://docs.swift.org/swift-book
+import Foundation
 
-print("Hello, world!")
+// This file is intentionally empty as the main entry point is defined in NotaryCommand.swift using @main attribute
