@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  Format:
+  format:
     name: Format
     runs-on: ubuntu-latest
     steps:
@@ -17,7 +17,7 @@ jobs:
       - name: Check format
         run: mise run fmt
 
-  Lint:
+  lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
@@ -28,7 +28,7 @@ jobs:
       - name: Run linter
         run: mise run lint
 
-  Build:
+  build:
     name: Build
     runs-on: ubuntu-latest
     steps:
@@ -39,7 +39,7 @@ jobs:
       - name: Build binary
         run: mise run build
 
-  Test:
+  test:
     name: Test
     runs-on: ubuntu-latest
     steps:
