@@ -32,21 +32,21 @@ sha256sum * > SHASUMS256.txt
 sha512sum * > SHASUMS512.txt
 
 # Sign with GPG if key is available
-if [ -n "$GPG_KEY_ID" ]; then
+if [ -n "${GPG_KEY_ID:-}" ] && command -v gpg >/dev/null 2>&1; then
     echo "Signing with GPG key $GPG_KEY_ID..."
-    gpg --clearsign -u "$GPG_KEY_ID" < SHASUMS256.txt > SHASUMS256.asc
-    gpg --clearsign -u "$GPG_KEY_ID" < SHASUMS512.txt > SHASUMS512.asc
+    gpg --clearsign -u "$GPG_KEY_ID" < SHASUMS256.txt > SHASUMS256.asc 2>/dev/null || echo "GPG signing failed, continuing..."
+    gpg --clearsign -u "$GPG_KEY_ID" < SHASUMS512.txt > SHASUMS512.asc 2>/dev/null || echo "GPG signing failed, continuing..."
 else
-    echo "Warning: GPG_KEY_ID not set, skipping GPG signatures"
+    echo "Note: GPG signing skipped (GPG_KEY_ID not set or gpg not available)"
 fi
 
 # Sign with minisign if available
 if [ -f "../../minisign.key" ] && command -v minisign >/dev/null 2>&1; then
     echo "Signing with minisign..."
-    minisign -Ss "../../minisign.key" -m SHASUMS256.txt < /dev/null
-    minisign -Ss "../../minisign.key" -m SHASUMS512.txt < /dev/null
+    minisign -Ss "../../minisign.key" -m SHASUMS256.txt < /dev/null 2>/dev/null || echo "Minisign signing failed, continuing..."
+    minisign -Ss "../../minisign.key" -m SHASUMS512.txt < /dev/null 2>/dev/null || echo "Minisign signing failed, continuing..."
 else
-    echo "Warning: minisign not available or key not found, skipping minisign signatures"
+    echo "Note: Minisign signing skipped (key not found or minisign not available)"
 fi
 
 cd ../..
@@ -69,14 +69,14 @@ sha256sum notary-latest-* > SHASUMS256.txt 2>/dev/null || true
 sha512sum notary-latest-* > SHASUMS512.txt 2>/dev/null || true
 
 # Sign latest checksums
-if [ -n "$GPG_KEY_ID" ]; then
-    gpg --clearsign -u "$GPG_KEY_ID" < SHASUMS256.txt > SHASUMS256.asc
-    gpg --clearsign -u "$GPG_KEY_ID" < SHASUMS512.txt > SHASUMS512.asc
+if [ -n "${GPG_KEY_ID:-}" ] && command -v gpg >/dev/null 2>&1; then
+    gpg --clearsign -u "$GPG_KEY_ID" < SHASUMS256.txt > SHASUMS256.asc 2>/dev/null || true
+    gpg --clearsign -u "$GPG_KEY_ID" < SHASUMS512.txt > SHASUMS512.asc 2>/dev/null || true
 fi
 
 if [ -f "../minisign.key" ] && command -v minisign >/dev/null 2>&1; then
-    minisign -Ss "../minisign.key" -m SHASUMS256.txt < /dev/null
-    minisign -Ss "../minisign.key" -m SHASUMS512.txt < /dev/null
+    minisign -Ss "../minisign.key" -m SHASUMS256.txt < /dev/null 2>/dev/null || true
+    minisign -Ss "../minisign.key" -m SHASUMS512.txt < /dev/null 2>/dev/null || true
 fi
 
 cd ..

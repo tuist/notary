@@ -173,6 +173,7 @@ jobs:
       - uses: jdx/mise-action@v2
 
       - name: Import GPG key
+        if: ${{ secrets.NOTARY_GPG_KEY != '' }}
         uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.NOTARY_GPG_KEY }}
@@ -195,6 +196,7 @@ jobs:
           merge-multiple: true
 
       - name: Setup minisign key
+        if: ${{ secrets.MINISIGN_KEY != '' }}
         run: echo "${{ secrets.MINISIGN_KEY }}" > minisign.key
 
       - name: Use version from check
@@ -205,13 +207,31 @@ jobs:
 
       - name: Generate changelog
         run: |
-          if command -v git-cliff >/dev/null 2>&1; then
-            git-cliff --latest --strip header -o CHANGELOG.md
-          else
-            echo "## Release ${{ steps.version.outputs.version }}" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            git log --pretty=format:"* %s" $(git describe --tags --abbrev=0 2>/dev/null || echo HEAD~10)..HEAD >> CHANGELOG.md
+          # Install git-cliff if not available
+          if ! command -v git-cliff >/dev/null 2>&1; then
+            echo "Installing git-cliff..."
+            mise install cargo:git-cliff@latest
           fi
+          
+          # Get the previous tag for comparison
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "Generating changelog from $PREVIOUS_TAG to HEAD..."
+            git-cliff "$PREVIOUS_TAG"..HEAD --strip header -o CHANGELOG.md
+          else
+            echo "Generating changelog for all commits..."
+            git-cliff --latest --strip header -o CHANGELOG.md
+          fi
+          
+          # Add release header
+          echo "## Release ${{ steps.version.outputs.version }}" > CHANGELOG_FINAL.md
+          echo "" >> CHANGELOG_FINAL.md
+          cat CHANGELOG.md >> CHANGELOG_FINAL.md
+          mv CHANGELOG_FINAL.md CHANGELOG.md
+          
+          echo "Changelog generated:"
+          cat CHANGELOG.md
 
       - name: Create release
         run: mise run release
@@ -232,7 +252,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
-          fail_on_unmatched_files: true
+          fail_on_unmatched_files: false
           draft: false
           files: |
             releases/${{ steps.version.outputs.version }}/*

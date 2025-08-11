@@ -11,11 +11,11 @@ Notary uses automated daily releases following the format `vYEAR.MONTH.DAY` (e.g
 - **Version**: Automatically uses the current date in `vYEAR.MONTH.DAY` format
 - **Process**: Fully automated - builds, packages, signs, and publishes releases
 
-## Required GitHub Secrets
+## GitHub Secrets (Optional)
 
-To enable the full release process with signed artifacts, configure the following secrets in your GitHub repository:
+Signing is optional but recommended. If you want to sign your releases, configure these secrets in your GitHub repository:
 
-### GPG Signing (Required for .asc files)
+### GPG Signing (Optional - for .asc files)
 - **`NOTARY_GPG_KEY`**: Your GPG private key for signing checksums
   ```bash
   # Export your GPG private key
@@ -28,7 +28,7 @@ To enable the full release process with signed artifacts, configure the followin
   gpg --list-secret-keys --keyid-format=long
   ```
 
-### Minisign (Required for .minisig files)
+### Minisign (Optional - for .minisig files)
 - **`MINISIGN_KEY`**: Your minisign secret key
   ```bash
   # Generate a minisign key pair if you don't have one
