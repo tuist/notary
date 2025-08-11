@@ -1,0 +1,197 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 2024.12.11)'
+        required: false
+
+concurrency:
+  group: release-${{ github.ref_name }}
+
+env:
+  DRY_RUN: ${{ startsWith(github.event.ref, 'refs/tags/v') && '0' || '1' }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build-binaries:
+    name: Build ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux
+          - os: linux
+            arch: amd64
+            runs-on: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - os: linux
+            arch: arm64
+            runs-on: ubuntu-latest
+            goos: linux
+            goarch: arm64
+          - os: linux
+            arch: armv7
+            runs-on: ubuntu-latest
+            goos: linux
+            goarch: arm
+            goarm: 7
+          # macOS
+          - os: darwin
+            arch: amd64
+            runs-on: macos-latest
+            goos: darwin
+            goarch: amd64
+          - os: darwin
+            arch: arm64
+            runs-on: macos-latest
+            goos: darwin
+            goarch: arm64
+          # Windows
+          - os: windows
+            arch: amd64
+            runs-on: windows-latest
+            goos: windows
+            goarch: amd64
+          - os: windows
+            arch: arm64
+            runs-on: windows-latest
+            goos: windows
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+        run: |
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            mise run build-release-windows
+          else
+            mise run build-release
+          fi
+
+      - name: Create archives
+        run: |
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            mise run package-windows
+          else
+            mise run package
+          fi
+        env:
+          OS: ${{ matrix.os }}
+          ARCH: ${{ matrix.arch }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            dist/notary-*.tar.gz
+            dist/notary-*.tar.xz
+            dist/notary-*.tar.zst
+            dist/notary-*.zip
+          if-no-files-found: error
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    needs: [build-binaries]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: jdx/mise-action@v2
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.NOTARY_GPG_KEY }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y minisign fd-find
+          mkdir -p "$HOME/.local/bin"
+          ln -s "$(which fdfind)" "$HOME/.local/bin/fd"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: binaries-*
+          merge-multiple: true
+
+      - name: Setup minisign key
+        run: echo "${{ secrets.MINISIGN_KEY }}" > minisign.key
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="v${{ github.event.inputs.version }}"
+          elif [ -n "${{ github.ref_name }}" ] && [[ "${{ github.ref_name }}" == v* ]]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION="v$(date +%Y.%m.%d)"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Generate changelog
+        run: |
+          if command -v git-cliff >/dev/null 2>&1; then
+            git-cliff --latest --strip header -o CHANGELOG.md
+          else
+            echo "## Release ${{ steps.version.outputs.version }}" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            git log --pretty=format:"* %s" $(git describe --tags --abbrev=0 2>/dev/null || echo HEAD~10)..HEAD >> CHANGELOG.md
+          fi
+
+      - name: Create release
+        run: mise run release
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+          MINISIGN_KEY: ${{ secrets.MINISIGN_KEY }}
+          MINISIGN_PUB: ${{ secrets.MINISIGN_PUB }}
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.event.ref, 'refs/tags/v')
+        with:
+          fail_on_unmatched_files: true
+          draft: false
+          files: |
+            releases/${{ steps.version.outputs.version }}/*
+            releases/SHASUMS256.txt
+            releases/SHASUMS256.asc
+            releases/SHASUMS256.minisig
+            releases/SHASUMS512.txt
+            releases/SHASUMS512.asc
+            releases/SHASUMS512.minisig
+          body_path: CHANGELOG.md
+          generate_release_notes: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag release (if manual)
+        if: github.event_name == 'workflow_dispatch' && env.DRY_RUN == '0'
+        run: |
+          git tag -s -m "Release ${{ steps.version.outputs.version }}" "${{ steps.version.outputs.version }}"
+          git push origin "${{ steps.version.outputs.version }}"

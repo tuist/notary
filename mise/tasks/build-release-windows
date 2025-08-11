@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# mise description="Build release binary for Windows"
+
+set -euo pipefail
+
+VERSION="${VERSION:-$(mise run get-version)}"
+ARCH="${GOARCH:-$(go env GOARCH)}"
+
+echo "🔨 Building notary ${VERSION} for windows/${ARCH}..."
+
+# Set build flags
+BUILD_FLAGS="-ldflags=-s -w -X main.version=${VERSION}"
+
+# Build the Windows executable
+GOOS=windows go build $BUILD_FLAGS -o "notary-windows-${ARCH}.exe" main.go
+
+echo "✅ Build complete!"

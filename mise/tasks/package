@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# mise description="Package binary into compressed archives"
+
+set -euo pipefail
+
+VERSION="${VERSION:-$(mise run get-version)}"
+OS="${OS:-$(go env GOOS)}"
+ARCH="${ARCH:-$(go env GOARCH)}"
+
+# Create dist directory
+mkdir -p dist
+
+# Determine binary name
+if [ "$OS" = "linux" ] || [ "$OS" = "darwin" ]; then
+    if [ "$ARCH" = "arm" ]; then
+        BINARY="notary-${OS}-${ARCH}v7"
+    else
+        BINARY="notary-${OS}-${ARCH}"
+    fi
+else
+    echo "Use package-windows for Windows builds"
+    exit 1
+fi
+
+if [ ! -f "$BINARY" ]; then
+    echo "Binary $BINARY not found!"
+    exit 1
+fi
+
+echo "📦 Packaging notary ${VERSION} for ${OS}-${ARCH}..."
+
+# Create temporary directory for packaging
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+
+# Prepare files
+mkdir -p "$TMPDIR/notary"
+cp "$BINARY" "$TMPDIR/notary/notary"
+chmod +x "$TMPDIR/notary/notary"
+cp README.md LICENSE.md "$TMPDIR/notary/" 2>/dev/null || true
+
+# Create archives
+cd "$TMPDIR"
+
+# tar.gz
+echo "  Creating tar.gz..."
+tar -czf "notary-${VERSION}-${OS}-${ARCH}.tar.gz" notary/
+
+# tar.xz
+echo "  Creating tar.xz..."
+tar -cJf "notary-${VERSION}-${OS}-${ARCH}.tar.xz" notary/
+
+# tar.zst
+if command -v zstd >/dev/null 2>&1; then
+    echo "  Creating tar.zst..."
+    tar -c notary/ | zstd -19 > "notary-${VERSION}-${OS}-${ARCH}.tar.zst"
+else
+    echo "  Skipping tar.zst (zstd not installed)"
+fi
+
+# Move archives to dist
+cd - >/dev/null
+mv "$TMPDIR"/*.tar.* dist/
+
+echo "✅ Packaging complete!"
+ls -lh dist/notary-${VERSION}-${OS}-${ARCH}.*

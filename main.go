@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const version = "0.1.0"
+var version = "dev" // Set by -ldflags during build
 
 type WorkflowConfig struct {
 	Name string               `yaml:"name"`

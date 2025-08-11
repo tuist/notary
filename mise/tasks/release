@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# mise description="Create release with checksums and signatures"
+
+set -euxo pipefail
+
+echo "::group::Setup"
+VERSION="${VERSION:-$(mise run get-version)}"
+RELEASE_DIR="releases"
+GPG_KEY_ID="${GPG_KEY_ID:-}"
+
+rm -rf "${RELEASE_DIR:?}/$VERSION"
+mkdir -p "$RELEASE_DIR/$VERSION"
+
+echo "::group::Collect artifacts"
+# Copy all archives from artifacts to release directory
+find artifacts -type f \( -name "*.tar.gz" -o -name "*.tar.xz" -o -name "*.tar.zst" -o -name "*.zip" \) | while read -r file; do
+    filename=$(basename "$file")
+    # Rename to include version if not already present
+    if [[ ! "$filename" =~ $VERSION ]]; then
+        newname="${filename/notary-/notary-$VERSION-}"
+        cp "$file" "$RELEASE_DIR/$VERSION/$newname"
+    else
+        cp "$file" "$RELEASE_DIR/$VERSION/$filename"
+    fi
+done
+
+echo "::group::Generate checksums for versioned release"
+cd "$RELEASE_DIR/$VERSION"
+
+# Generate SHA256 and SHA512 checksums
+sha256sum * > SHASUMS256.txt
+sha512sum * > SHASUMS512.txt
+
+# Sign with GPG if key is available
+if [ -n "$GPG_KEY_ID" ]; then
+    echo "Signing with GPG key $GPG_KEY_ID..."
+    gpg --clearsign -u "$GPG_KEY_ID" < SHASUMS256.txt > SHASUMS256.asc
+    gpg --clearsign -u "$GPG_KEY_ID" < SHASUMS512.txt > SHASUMS512.asc
+else
+    echo "Warning: GPG_KEY_ID not set, skipping GPG signatures"
+fi
+
+# Sign with minisign if available
+if [ -f "../../minisign.key" ] && command -v minisign >/dev/null 2>&1; then
+    echo "Signing with minisign..."
+    minisign -Ss "../../minisign.key" -m SHASUMS256.txt < /dev/null
+    minisign -Ss "../../minisign.key" -m SHASUMS512.txt < /dev/null
+else
+    echo "Warning: minisign not available or key not found, skipping minisign signatures"
+fi
+
+cd ../..
+
+echo "::group::Create latest symlinks and checksums"
+cd "$RELEASE_DIR"
+
+# Create latest symlinks for easy downloading
+for file in "$VERSION"/*.tar.gz "$VERSION"/*.tar.xz "$VERSION"/*.tar.zst "$VERSION"/*.zip; do
+    [ -f "$file" ] || continue
+    filename=$(basename "$file")
+    # Remove version from filename for latest link
+    latest_name="${filename/$VERSION-/latest-}"
+    latest_name="${latest_name/notary-/notary-}"
+    ln -sf "$file" "$latest_name"
+done
+
+# Generate checksums for latest files
+sha256sum notary-latest-* > SHASUMS256.txt 2>/dev/null || true
+sha512sum notary-latest-* > SHASUMS512.txt 2>/dev/null || true
+
+# Sign latest checksums
+if [ -n "$GPG_KEY_ID" ]; then
+    gpg --clearsign -u "$GPG_KEY_ID" < SHASUMS256.txt > SHASUMS256.asc
+    gpg --clearsign -u "$GPG_KEY_ID" < SHASUMS512.txt > SHASUMS512.asc
+fi
+
+if [ -f "../minisign.key" ] && command -v minisign >/dev/null 2>&1; then
+    minisign -Ss "../minisign.key" -m SHASUMS256.txt < /dev/null
+    minisign -Ss "../minisign.key" -m SHASUMS512.txt < /dev/null
+fi
+
+cd ..
+
+echo "::group::Release contents"
+ls -la "$RELEASE_DIR/$VERSION/"
+echo ""
+echo "Release $VERSION prepared successfully!"

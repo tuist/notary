@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# mise description="Package Windows binary into ZIP archive"
+
+set -euo pipefail
+
+VERSION="${VERSION:-$(mise run get-version)}"
+ARCH="${ARCH:-amd64}"
+
+# Create dist directory
+mkdir -p dist
+
+BINARY="notary-windows-${ARCH}.exe"
+
+if [ ! -f "$BINARY" ]; then
+    echo "Binary $BINARY not found!"
+    exit 1
+fi
+
+echo "📦 Packaging notary ${VERSION} for windows-${ARCH}..."
+
+# Create temporary directory for packaging
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+
+# Prepare files
+mkdir -p "$TMPDIR/notary"
+cp "$BINARY" "$TMPDIR/notary/notary.exe"
+cp README.md LICENSE.md "$TMPDIR/notary/" 2>/dev/null || true
+
+# Create ZIP archive
+cd "$TMPDIR"
+if command -v zip >/dev/null 2>&1; then
+    zip -r "notary-${VERSION}-windows-${ARCH}.zip" notary/
+elif command -v 7z >/dev/null 2>&1; then
+    7z a "notary-${VERSION}-windows-${ARCH}.zip" notary/
+else
+    echo "Neither zip nor 7z found!"
+    exit 1
+fi
+
+# Move archive to dist
+cd - >/dev/null
+mv "$TMPDIR"/*.zip dist/
+
+echo "✅ Packaging complete!"
+ls -lh dist/notary-${VERSION}-windows-${ARCH}.zip

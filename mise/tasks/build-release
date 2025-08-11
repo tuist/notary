@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# mise description="Build release binary for current GOOS/GOARCH"
+
+set -euo pipefail
+
+VERSION="${VERSION:-$(mise run get-version)}"
+OS="${GOOS:-$(go env GOOS)}"
+ARCH="${GOARCH:-$(go env GOARCH)}"
+ARM="${GOARM:-}"
+
+echo "🔨 Building notary ${VERSION} for ${OS}/${ARCH}${ARM:+/v$ARM}..."
+
+# Set build flags
+BUILD_FLAGS="-ldflags=-s -w -X main.version=${VERSION}"
+
+# Build the binary
+if [ -n "${ARM:-}" ]; then
+    GOARM="$ARM" go build $BUILD_FLAGS -o "notary-${OS}-${ARCH}v${ARM}" main.go
+else
+    go build $BUILD_FLAGS -o "notary-${OS}-${ARCH}" main.go
+fi
+
+echo "✅ Build complete!"

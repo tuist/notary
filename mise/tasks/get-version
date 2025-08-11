@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# mise description="Get the current version"
+
+set -euo pipefail
+
+# If VERSION env var is set, use it
+if [ -n "${VERSION:-}" ]; then
+    echo "$VERSION"
+    exit 0
+fi
+
+# Check if we're on a tag
+if git describe --exact-match --tags HEAD 2>/dev/null; then
+    git describe --exact-match --tags HEAD
+else
+    # Generate version based on date
+    echo "v$(date +%Y.%m.%d)"
+fi
