@@ -6,7 +6,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  Format:
+    name: Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,11 +22,50 @@ jobs:
       - name: Check format
         run: mise run fmt
 
-      - name: Lint
+  Lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+        with:
+          version: latest
+          install: true
+          cache: true
+
+      - name: Run linter
         run: mise run lint
 
-      - name: Build
+  Build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+        with:
+          version: latest
+          install: true
+          cache: true
+
+      - name: Build binary
         run: mise run build
 
-      - name: Test
+  Test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+        with:
+          version: latest
+          install: true
+          cache: true
+
+      - name: Run tests
         run: mise run test
