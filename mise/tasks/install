@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# mise description="Install notary globally"
+
+set -euo pipefail
+
+echo "📦 Installing notary globally..."
+go install
+echo "✅ Notary installed!"
+echo "   You can now use 'notary' from anywhere"

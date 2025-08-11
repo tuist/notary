@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# mise description="Run tests"
+
+set -euo pipefail
+
+echo "🧪 Running tests..."
+go test -v ./...
+echo "✅ Tests complete!"

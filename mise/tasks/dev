@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# mise description="Run notary in development mode"
+
+set -euo pipefail
+
+# Pass all arguments to the go run command
+go run main.go "$@"

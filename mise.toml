@@ -1,0 +1,6 @@
+[tools]
+go = "1.21"
+
+[env]
+GOBIN = "{{config_root}}/bin"
+PATH = "{{config_root}}/bin:$PATH"

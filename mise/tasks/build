@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# mise description="Build the notary binary"
+
+set -euo pipefail
+
+echo "🔨 Building notary..."
+go build -o notary
+echo "✅ Build complete!"

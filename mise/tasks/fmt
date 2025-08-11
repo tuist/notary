@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# mise description="Format Go code"
+
+set -euo pipefail
+
+echo "🎨 Formatting Go code..."
+go fmt ./...
+echo "✅ Formatting complete!"

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# mise description="Run linter"
+# mise depends=["install-linter"]
+
+set -euo pipefail
+
+echo "🔍 Running linter..."
+golangci-lint run
+echo "✅ Linting complete!"

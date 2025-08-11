@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# mise description="Clean build artifacts"
+
+set -euo pipefail
+
+echo "🧹 Cleaning build artifacts..."
+
+if [ -f "notary" ]; then
+  rm notary
+  echo "   Removed notary binary"
+fi
+
+if [ -d "bin" ]; then
+  rm -rf bin
+  echo "   Removed bin directory"
+fi
+
+echo "✅ Clean complete!"
