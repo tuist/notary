@@ -173,9 +173,9 @@ jobs:
 
       - uses: jdx/mise-action@v2
 
-      - name: Import GPG key
-        if: secrets.NOTARY_GPG_KEY
+      - name: Import GPG key (if available)
         uses: crazy-max/ghaction-import-gpg@v6
+        continue-on-error: true
         with:
           gpg_private_key: ${{ secrets.NOTARY_GPG_KEY }}
           git_user_signingkey: true
@@ -196,9 +196,13 @@ jobs:
           pattern: binaries-*
           merge-multiple: true
 
-      - name: Setup minisign key
-        if: secrets.NOTARY_MINISIGN_KEY
-        run: echo "${{ secrets.NOTARY_MINISIGN_KEY }}" > minisign.key
+      - name: Setup minisign key (if available)
+        run: |
+          if [ -n "${{ secrets.NOTARY_MINISIGN_KEY }}" ]; then
+            echo "${{ secrets.NOTARY_MINISIGN_KEY }}" > minisign.key
+          else
+            echo "Note: Minisign key not configured"
+          fi
 
       - name: Use version from check
         id: version
