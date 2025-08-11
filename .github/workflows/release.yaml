@@ -25,6 +25,7 @@ jobs:
   check-changes:
     name: Check for changes
     runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     outputs:
       should-release: ${{ steps.check.outputs.should-release }}
       version: ${{ steps.check.outputs.version }}
