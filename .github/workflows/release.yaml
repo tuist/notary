@@ -1,25 +1,79 @@
 name: Release
 
 on:
-  push:
-    tags: ["v*"]
+  schedule:
+    # Run daily at 00:00 UTC
+    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       version:
         description: 'Version to release (e.g., 2024.12.11)'
         required: false
+      force:
+        description: 'Force release even if no changes'
+        type: boolean
+        default: false
 
 concurrency:
   group: release-${{ github.ref_name }}
 
 env:
-  DRY_RUN: ${{ startsWith(github.event.ref, 'refs/tags/v') && '0' || '1' }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
+  check-changes:
+    name: Check for changes
+    runs-on: ubuntu-latest
+    outputs:
+      should-release: ${{ steps.check.outputs.should-release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes since last release
+        id: check
+        run: |
+          # Get the version to use
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="v${{ github.event.inputs.version }}"
+          else
+            VERSION="v$(date +%Y.%m.%d)"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          
+          # Check if this version already exists
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Version $VERSION already exists"
+            echo "should-release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          # Get the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No previous releases found, will create first release"
+            echo "should-release=true" >> "$GITHUB_OUTPUT"
+          else
+            # Check if there are any commits since the last tag
+            COMMITS_SINCE=$(git rev-list --count "$LATEST_TAG"..HEAD)
+            
+            if [ "$COMMITS_SINCE" -gt 0 ] || [ "${{ github.event.inputs.force }}" == "true" ]; then
+              echo "Found $COMMITS_SINCE commits since $LATEST_TAG"
+              echo "should-release=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "No changes since $LATEST_TAG"
+              echo "should-release=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
   build-binaries:
     name: Build ${{ matrix.os }}-${{ matrix.arch }}
+    needs: [check-changes]
+    if: needs.check-changes.outputs.should-release == 'true'
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 30
     strategy:
@@ -109,7 +163,8 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: write
-    needs: [build-binaries]
+    needs: [check-changes, build-binaries]
+    if: needs.check-changes.outputs.should-release == 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -142,16 +197,10 @@ jobs:
       - name: Setup minisign key
         run: echo "${{ secrets.MINISIGN_KEY }}" > minisign.key
 
-      - name: Get version
+      - name: Use version from check
         id: version
         run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            VERSION="v${{ github.event.inputs.version }}"
-          elif [ -n "${{ github.ref_name }}" ] && [[ "${{ github.ref_name }}" == v* ]]; then
-            VERSION="${{ github.ref_name }}"
-          else
-            VERSION="v$(date +%Y.%m.%d)"
-          fi
+          VERSION="${{ needs.check-changes.outputs.version }}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Generate changelog
@@ -172,10 +221,17 @@ jobs:
           MINISIGN_KEY: ${{ secrets.MINISIGN_KEY }}
           MINISIGN_PUB: ${{ secrets.MINISIGN_PUB }}
 
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a -m "Release ${{ steps.version.outputs.version }}" "${{ steps.version.outputs.version }}"
+          git push origin "${{ steps.version.outputs.version }}"
+
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.event.ref, 'refs/tags/v')
         with:
+          tag_name: ${{ steps.version.outputs.version }}
           fail_on_unmatched_files: true
           draft: false
           files: |
@@ -189,9 +245,3 @@ jobs:
           body_path: CHANGELOG.md
           generate_release_notes: false
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Tag release (if manual)
-        if: github.event_name == 'workflow_dispatch' && env.DRY_RUN == '0'
-        run: |
-          git tag -s -m "Release ${{ steps.version.outputs.version }}" "${{ steps.version.outputs.version }}"
-          git push origin "${{ steps.version.outputs.version }}"

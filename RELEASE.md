@@ -2,7 +2,14 @@
 
 ## Overview
 
-Notary uses automated releases triggered by Git tags following the format `vYEAR.MONTH.DAY` (e.g., `v2024.12.11`).
+Notary uses automated daily releases following the format `vYEAR.MONTH.DAY` (e.g., `v2024.12.11`). Releases are created automatically when there are new commits since the last release.
+
+## Automatic Daily Releases
+
+- **Schedule**: Runs daily at 00:00 UTC
+- **Condition**: Only creates a release if there are new commits since the last tag
+- **Version**: Automatically uses the current date in `vYEAR.MONTH.DAY` format
+- **Process**: Fully automated - builds, packages, signs, and publishes releases
 
 ## Required GitHub Secrets
 
@@ -35,21 +42,19 @@ To enable the full release process with signed artifacts, configure the followin
 
 ## Release Workflow
 
-### Automatic Release (Recommended)
+### Automatic Daily Release
 
-1. Create and push a version tag:
-   ```bash
-   VERSION="v$(date +%Y.%m.%d)"
-   git tag -s -m "Release $VERSION" "$VERSION"
-   git push origin "$VERSION"
-   ```
+The release workflow runs automatically every day at 00:00 UTC and will:
+1. Check if there are new commits since the last release
+2. If changes exist, create a new release with today's date
+3. Build binaries for all platforms
+4. Create compressed archives (.tar.gz, .tar.xz, .tar.zst, .zip)
+5. Generate SHA256 and SHA512 checksums
+6. Sign checksums with GPG and minisign
+7. Create and push a Git tag
+8. Create a GitHub release with all artifacts
 
-2. The GitHub Actions workflow will automatically:
-   - Build binaries for all platforms
-   - Create compressed archives (.tar.gz, .tar.xz, .tar.zst, .zip)
-   - Generate SHA256 and SHA512 checksums
-   - Sign checksums with GPG and minisign
-   - Create a GitHub release with all artifacts
+No manual intervention is required for regular releases.
 
 ### Manual Release
 
@@ -57,8 +62,10 @@ You can also trigger a release manually from GitHub Actions:
 
 1. Go to Actions → Release workflow
 2. Click "Run workflow"
-3. Optionally specify a version (defaults to current date)
-4. The workflow will create and tag the release
+3. Optionally:
+   - Specify a custom version (defaults to current date)
+   - Check "Force release" to create a release even if no changes exist
+4. The workflow will check for changes and create a release if needed
 
 ## Release Artifacts
 
