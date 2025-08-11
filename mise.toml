@@ -1,6 +1,6 @@
 [tools]
 go = "1.21"
+"go:github.com/golangci/golangci-lint/cmd/golangci-lint" = "latest"
 
 [env]
 GOBIN = "{{config_root}}/bin"
-PATH = "{{config_root}}/bin:$PATH"

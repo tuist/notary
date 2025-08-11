@@ -1,6 +1,6 @@
 module github.com/tuist/notary
 
-go 1.24.6
+go 1.21
 
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

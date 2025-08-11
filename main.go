@@ -14,22 +14,22 @@ import (
 const version = "0.1.0"
 
 type WorkflowConfig struct {
-	Name string                 `yaml:"name"`
-	On   interface{}            `yaml:"on"`
-	Jobs map[string]JobConfig   `yaml:"jobs"`
+	Name string               `yaml:"name"`
+	On   interface{}          `yaml:"on"`
+	Jobs map[string]JobConfig `yaml:"jobs"`
 }
 
 type JobConfig struct {
-	RunsOn string          `yaml:"runs-on"`
-	Steps  []StepConfig    `yaml:"steps"`
+	RunsOn string       `yaml:"runs-on"`
+	Steps  []StepConfig `yaml:"steps"`
 }
 
 type StepConfig struct {
-	Name   string                 `yaml:"name"`
-	Uses   string                 `yaml:"uses"`
-	Run    string                 `yaml:"run"`
-	With   map[string]interface{} `yaml:"with"`
-	Env    map[string]string      `yaml:"env"`
+	Name string                 `yaml:"name"`
+	Uses string                 `yaml:"uses"`
+	Run  string                 `yaml:"run"`
+	With map[string]interface{} `yaml:"with"`
+	Env  map[string]string      `yaml:"env"`
 }
 
 var rootCmd = &cobra.Command{
@@ -56,14 +56,14 @@ var runCmd = &cobra.Command{
 		}
 
 		fmt.Printf("🚀 Running workflow: %s\n", workflow.Name)
-		
+
 		for jobName, job := range workflow.Jobs {
 			fmt.Printf("\n📦 Job: %s\n", jobName)
 			if err := runJob(jobName, job); err != nil {
 				log.Fatalf("Job %s failed: %v", jobName, err)
 			}
 		}
-		
+
 		fmt.Println("\n✅ Workflow completed successfully!")
 	},
 }
@@ -74,9 +74,9 @@ var signoffCmd = &cobra.Command{
 	Long:  `Sign off the current commit using the GitHub CLI after successful local workflow execution.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		message, _ := cmd.Flags().GetString("message")
-		
+
 		fmt.Println("📝 Signing off commit...")
-		
+
 		// Get the current commit SHA
 		commitCmd := exec.Command("git", "rev-parse", "HEAD")
 		commitOutput, err := commitCmd.Output()
@@ -84,15 +84,15 @@ var signoffCmd = &cobra.Command{
 			log.Fatalf("Failed to get current commit: %v", err)
 		}
 		commitSHA := string(commitOutput[:7]) // Short SHA
-		
+
 		// Use gh CLI to create a commit status
-		ghCmd := exec.Command("gh", "api", 
+		ghCmd := exec.Command("gh", "api",
 			fmt.Sprintf("repos/:owner/:repo/statuses/%s", commitSHA),
 			"-f", "state=success",
 			"-f", "context=notary/local",
 			"-f", fmt.Sprintf("description=%s", message),
 		)
-		
+
 		if output, err := ghCmd.CombinedOutput(); err != nil {
 			fmt.Printf("⚠️  Failed to sign off with GitHub CLI: %v\n", err)
 			fmt.Printf("Output: %s\n", output)
@@ -109,16 +109,16 @@ var listCmd = &cobra.Command{
 	Long:  `List all available GitHub Actions workflows in the repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		workflowsDir := ".github/workflows"
-		
+
 		files, err := filepath.Glob(filepath.Join(workflowsDir, "*.yml"))
 		yamlFiles, _ := filepath.Glob(filepath.Join(workflowsDir, "*.yaml"))
 		files = append(files, yamlFiles...)
-		
+
 		if err != nil || len(files) == 0 {
 			fmt.Println("No workflows found in .github/workflows/")
 			return
 		}
-		
+
 		fmt.Println("📋 Available workflows:")
 		for _, file := range files {
 			workflow, err := loadWorkflow(file)
@@ -135,7 +135,7 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(signoffCmd)
 	rootCmd.AddCommand(listCmd)
-	
+
 	signoffCmd.Flags().StringP("message", "m", "CI passed locally", "Sign-off message")
 }
 
@@ -151,19 +151,19 @@ func loadWorkflow(path string) (*WorkflowConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read workflow file: %w", err)
 	}
-	
+
 	var workflow WorkflowConfig
 	if err := yaml.Unmarshal(data, &workflow); err != nil {
 		return nil, fmt.Errorf("failed to parse workflow: %w", err)
 	}
-	
+
 	return &workflow, nil
 }
 
 func runJob(name string, job JobConfig) error {
 	for i, step := range job.Steps {
 		fmt.Printf("  Step %d/%d: %s\n", i+1, len(job.Steps), step.Name)
-		
+
 		if step.Run != "" {
 			// Execute shell commands
 			if err := runCommand(step.Run, step.Env); err != nil {
@@ -189,12 +189,12 @@ func runCommand(command string, env map[string]string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
-	
+
 	// Set environment variables
 	cmd.Env = os.Environ()
 	for k, v := range env {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
-	
+
 	return cmd.Run()
 }
