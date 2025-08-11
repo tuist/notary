@@ -4,3 +4,8 @@ go = "1.21"
 
 [env]
 GOBIN = "{{config_root}}/bin"
+
+[settings]
+sops.strict = false
+experimental = true
+lockfile = true
