@@ -12,12 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup mise
-        uses: jdx/mise-action@v2
-        with:
-          version: latest
-          install: true
-          cache: true
+      - uses: jdx/mise-action@v2
 
       - name: Check format
         run: mise run fmt
@@ -28,12 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup mise
-        uses: jdx/mise-action@v2
-        with:
-          version: latest
-          install: true
-          cache: true
+      - uses: jdx/mise-action@v2
 
       - name: Run linter
         run: mise run lint
@@ -44,12 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup mise
-        uses: jdx/mise-action@v2
-        with:
-          version: latest
-          install: true
-          cache: true
+      - uses: jdx/mise-action@v2
 
       - name: Build binary
         run: mise run build
@@ -60,12 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup mise
-        uses: jdx/mise-action@v2
-        with:
-          version: latest
-          install: true
-          cache: true
+      - uses: jdx/mise-action@v2
 
       - name: Run tests
         run: mise run test
