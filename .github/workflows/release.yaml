@@ -173,7 +173,7 @@ jobs:
       - uses: jdx/mise-action@v2
 
       - name: Import GPG key
-        if: ${{ secrets.NOTARY_GPG_KEY != '' }}
+        if: secrets.NOTARY_GPG_KEY
         uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.NOTARY_GPG_KEY }}
@@ -196,7 +196,7 @@ jobs:
           merge-multiple: true
 
       - name: Setup minisign key
-        if: ${{ secrets.MINISIGN_KEY != '' }}
+        if: secrets.MINISIGN_KEY
         run: echo "${{ secrets.MINISIGN_KEY }}" > minisign.key
 
       - name: Use version from check
