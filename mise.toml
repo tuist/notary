@@ -1,5 +1,5 @@
 [tools]
-go = "1.21"
+go = "1.25.0"
 "go:github.com/golangci/golangci-lint/cmd/golangci-lint" = "latest"
 "cargo:git-cliff" = "latest"
 
